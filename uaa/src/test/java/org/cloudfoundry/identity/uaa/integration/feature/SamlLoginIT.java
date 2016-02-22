@@ -12,9 +12,7 @@
  *******************************************************************************/
 package org.cloudfoundry.identity.uaa.integration.feature;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import org.cloudfoundry.identity.uaa.ServerRunning;
 import org.cloudfoundry.identity.uaa.constants.OriginKeys;
 import org.cloudfoundry.identity.uaa.integration.util.IntegrationTestUtils;
@@ -75,6 +73,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.cloudfoundry.identity.uaa.integration.util.IntegrationTestUtils.createSimplePHPSamlIDP;
+import static org.cloudfoundry.identity.uaa.integration.util.IntegrationTestUtils.deleteProvider;
 import static org.cloudfoundry.identity.uaa.integration.util.IntegrationTestUtils.getZoneAdminToken;
 import static org.cloudfoundry.identity.uaa.provider.ExternalIdentityProviderDefinition.EMAIL_ATTRIBUTE_NAME;
 import static org.cloudfoundry.identity.uaa.provider.ExternalIdentityProviderDefinition.GROUP_ATTRIBUTE_NAME;
@@ -131,6 +130,7 @@ public class SamlLoginIT {
         webDriver.manage().deleteAllCookies();
         webDriver.get("http://simplesamlphp.cfapps.io/module.php/core/authenticate.php?as=example-userpass&logout");
         webDriver.get("http://simplesamlphp2.cfapps.io/module.php/core/authenticate.php?as=example-userpass&logout");
+        deleteProvider(getZoneAdminToken(baseUrl, serverRunning), baseUrl, "uaa", "simplesamlphp");
         screenShootRule.setWebDriver(webDriver);
     }
 
@@ -372,7 +372,7 @@ public class SamlLoginIT {
         provider.setOriginKey(providerDefinition.getIdpEntityAlias());
         provider.setName("simplesamlphp for uaa");
 
-        String zoneAdminToken = IntegrationTestUtils.getZoneAdminToken(baseUrl, serverRunning);
+        String zoneAdminToken = getZoneAdminToken(baseUrl, serverRunning);
 
         provider = IntegrationTestUtils.createOrUpdateProvider(zoneAdminToken, baseUrl, provider);
 

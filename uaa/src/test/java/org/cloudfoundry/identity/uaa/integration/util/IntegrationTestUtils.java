@@ -584,6 +584,24 @@ public class IntegrationTestUtils {
         return null;
     }
 
+    public static void deleteProvider(String zoneAdminToken,
+                                               String url,
+                                               String zoneId,
+                                               String originKey) {
+        IdentityProvider provider = getProvider(zoneAdminToken, url, zoneId, originKey);
+        RestTemplate client = new RestTemplate();
+        MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
+        headers.add("Authorization", "bearer " + zoneAdminToken);
+        headers.add(IdentityZoneSwitchingFilter.HEADER, zoneId);
+        HttpEntity getHeaders = new HttpEntity(headers);
+        client.exchange(
+                url + "/identity-providers" + provider.getId(),
+                HttpMethod.DELETE,
+                getHeaders,
+                String.class
+        );
+    }
+
     public static List<IdentityProvider> getProviders(String zoneAdminToken,
                                                       String url,
                                                       String zoneId) {
