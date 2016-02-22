@@ -55,8 +55,8 @@ public class SamlLoginServerKeyManager implements KeyManager {
             keystore.setKeyEntry("service-provider-cert", pkey.getPrivate(), password.toCharArray(),
                             new Certificate[] { cert });
 
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(keystore, password.toCharArray());
+//            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+//            kmf.init(keystore, password.toCharArray());
 
             keyManager = new JKSKeyManager(keystore, Collections.singletonMap("service-provider-cert", password),
                             "service-provider-cert");
