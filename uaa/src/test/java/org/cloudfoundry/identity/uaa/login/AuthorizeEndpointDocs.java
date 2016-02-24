@@ -10,6 +10,7 @@ import org.cloudfoundry.identity.uaa.test.UaaTestAccounts;
 import org.cloudfoundry.identity.uaa.user.UaaAuthority;
 import org.cloudfoundry.identity.uaa.zone.IdentityZoneHolder;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.restdocs.snippet.Snippet;
@@ -24,6 +25,8 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import java.util.Arrays;
 
 import static org.cloudfoundry.identity.uaa.mock.util.MockMvcUtils.utils;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.http.MediaType.APPLICATION_FORM_URLENCODED;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
@@ -39,6 +42,8 @@ import static org.springframework.security.oauth2.common.util.OAuth2Utils.REDIRE
 import static org.springframework.security.oauth2.common.util.OAuth2Utils.RESPONSE_TYPE;
 import static org.springframework.security.oauth2.common.util.OAuth2Utils.SCOPE;
 import static org.springframework.security.oauth2.common.util.OAuth2Utils.STATE;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 public class AuthorizeEndpointDocs extends InjectedMockContextTest {
@@ -83,67 +88,73 @@ public class AuthorizeEndpointDocs extends InjectedMockContextTest {
                         requestParameters));
     }
 
-//    @Test
-//    public void nonBrowserCodeRequest() throws Exception {
-//        MockHttpSession session = new MockHttpSession();
-//        SecurityContext securityContext = new SecurityContextImpl();
-//        securityContext.setAuthentication(principal);
-//        session.putValue("SPRING_SECURITY_CONTEXT", securityContext);
-//
-//        MockHttpServletRequestBuilder get = get("/oauth/authorize")
-//                .accept(APPLICATION_JSON)
-//                .param(RESPONSE_TYPE, "code")
-//                .param(CLIENT_ID, "app")
-//                .param(REDIRECT_URI, "http://localhost:8080/app/")
-//                .session(session);
-//
-//        Snippet requestParameters = requestParameters(
-//                parameterWithName(RESPONSE_TYPE).description("either \"code\" for requesting an authorization code or \"token\" for an access token, as per OAuth spec"),
-//                parameterWithName(CLIENT_ID).description("a unique string representing the registration information provided by the client"),
-//                parameterWithName(REDIRECT_URI).description("redirection URI to which the authorization server will send the user-agent back once access is granted (or denied), optional if pre-registered by the client")
-//        );
-//
-//        Snippet responseFields = responseFields(
-//                fieldWithPath("test").description("test description")
-//        );
-//
-//        getMockMvc().perform(get)
-//                .andExpect(status().isOk())
-//                .andDo(document("{ClassName}/{methodName}",
-//                        preprocessRequest(prettyPrint()),
-//                        requestParameters,
-//                        responseFields));
-//    }
+    @Test
+    @Ignore
+    public void jsonCodeRequestUnapproved() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        SecurityContext securityContext = new SecurityContextImpl();
+        securityContext.setAuthentication(principal);
+        session.putValue("SPRING_SECURITY_CONTEXT", securityContext);
 
-//    @Test
-//    public void nonStandardCodeRequest() throws Exception {
-//        String cfAccessToken = utils().getUserOAuthAccessToken(
-//                getMockMvc(),
-//                "cf",
-//                "",
-//                UaaTestAccounts.DEFAULT_USERNAME,
-//                UaaTestAccounts.DEFAULT_PASSWORD,
-//                "uaa.user"
-//        );
-//
-//        MockHttpServletRequestBuilder get = get("/oauth/authorize")
-//                .header("Authorization", "Bearer " + cfAccessToken)
-//                .param(RESPONSE_TYPE, "code")
-//                .param(CLIENT_ID, "app")
-//                .param(REDIRECT_URI, "http://redirect.to/app")
-//                .param(STATE, new RandomValueStringGenerator().generate());
-//
-//        Snippet requestParameters = requestParameters(
-//                parameterWithName(RESPONSE_TYPE).description("either \"code\" for requesting an authorization code or \"token\" for an access token, as per OAuth spec"),
-//                parameterWithName(CLIENT_ID).description("a unique string representing the registration information provided by the client"),
-//                parameterWithName(REDIRECT_URI).description("redirection URI to which the authorization server will send the user-agent back once access is granted (or denied), optional if pre-registered by the client"),
-//                parameterWithName(STATE).description("any random string to be returned in the Location header as a query parameter, used to achieve per-request customization")
-//        );
-//
-//        getMockMvc().perform(get)
-//                .andExpect(status().isFound())
-//                .andDo(document("{ClassName}/{methodName}",
-//                        preprocessRequest(prettyPrint()),
-//                        requestParameters));
-//    }
+        MockHttpServletRequestBuilder get = get("/oauth/authorize")
+                .accept(APPLICATION_JSON)
+                .param(RESPONSE_TYPE, "code")
+                .param(CLIENT_ID, "dashboard")
+                .param(SCOPE, "dashboard.user openid")
+                .param(REDIRECT_URI, "http://redirect.to/app")
+                .session(session);
+
+        Snippet requestParameters = requestParameters(
+                parameterWithName(RESPONSE_TYPE).description("either \"code\" for requesting an authorization code or \"token\" for an access token, as per OAuth spec"),
+                parameterWithName(CLIENT_ID).description("a unique string representing the registration information provided by the client"),
+                parameterWithName(SCOPE).description("requested scopes"),
+                parameterWithName(REDIRECT_URI).description("redirection URI to which the authorization server will send the user-agent back once access is granted (or denied), optional if pre-registered by the client")
+        );
+
+        Snippet responseFields = responseFields(
+                fieldWithPath("message").description("an explanation of the failed outcome"),
+                fieldWithPath("scopes").description("a list of scopes that need to be approved or denied")
+        );
+
+        getMockMvc().perform(get)
+                .andExpect(status().isOk())
+                .andDo(print())
+                .andExpect(content().string(not(isEmptyOrNullString())))
+                .andDo(document("{ClassName}/{methodName}",
+                        preprocessRequest(prettyPrint()),
+                        requestParameters,
+                        responseFields));
+    }
+
+    @Test
+    public void apiCodeRequest() throws Exception {
+        String cfAccessToken = utils().getUserOAuthAccessToken(
+                getMockMvc(),
+                "cf",
+                "",
+                UaaTestAccounts.DEFAULT_USERNAME,
+                UaaTestAccounts.DEFAULT_PASSWORD,
+                "uaa.user"
+        );
+
+        MockHttpServletRequestBuilder get = get("/oauth/authorize")
+                .header("Authorization", "Bearer " + cfAccessToken)
+                .param(RESPONSE_TYPE, "code")
+                .param(CLIENT_ID, "login")
+                .param(REDIRECT_URI, "https://uaa.cloudfoundry.com/redirect/cf")
+                .param(STATE, new RandomValueStringGenerator().generate());
+
+        Snippet requestParameters = requestParameters(
+                parameterWithName(RESPONSE_TYPE).description("either \"code\" for requesting an authorization code or \"token\" for an access token, as per OAuth spec"),
+                parameterWithName(CLIENT_ID).description("a unique string representing the registration information provided by the client"),
+                parameterWithName(REDIRECT_URI).description("redirection URI to which the authorization server will send the user-agent back once access is granted (or denied), optional if pre-registered by the client"),
+                parameterWithName(STATE).description("any random string to be returned in the Location header as a query parameter, used to achieve per-request customization")
+        );
+
+        getMockMvc().perform(get)
+                .andExpect(status().isFound())
+                .andDo(document("{ClassName}/{methodName}",
+                        preprocessRequest(prettyPrint()),
+                        requestParameters));
+    }
 }
